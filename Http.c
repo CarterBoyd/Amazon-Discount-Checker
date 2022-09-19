@@ -12,11 +12,20 @@
 #define PORT 443
 #define HTTPBUFFER 1000
 
+
+/**
+  * when a program has failed it will always send out to perror then exit with a failure
+  */
 static inline void error(const char *error) {
 	perror(error);
 	exit(EXIT_FAILURE);
 }
 
+/**
+  * If the old buffer is close to capacity it will create a new buffer
+  * that is twice the size and copy all the information from the old to
+  * the new, freeing the old buffer and returning the new one
+  */
 static inline char *resizeBuffer(char *oldBuffer, const int oldSize) {
 	char *newBuffer = malloc(sizeof(char) * (oldSize * 2));
 	memcpy(newBuffer, oldBuffer, oldSize);

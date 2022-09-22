@@ -15,7 +15,13 @@
 #define PORT 443
 #define HTTPBUFFER 1000
 
-//const int isOnSale(const char *host, const char *path);
+typedef struct httpHeader {
+	char *host;
+	char *url;
+	struct httpHeader *next;
+} header;
+
+void httpProduct(header *head);
 
 #endif // HTTP
 

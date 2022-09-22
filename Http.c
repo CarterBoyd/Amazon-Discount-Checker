@@ -1,12 +1,6 @@
 #include "Http.h"
 #include <openssl/ssl.h>
 
-typedef struct httpHeader {
-	char *host;
-	char *url;
-	struct httpHeader *next;
-} header;
-
 /**
   * when a program has failed it will always send out to perror then exit with a failure
   */

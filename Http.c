@@ -1,5 +1,4 @@
 #include "Http.h"
-#include <openssl/ssl.h>
 
 /**
   * when a program has failed it will always send out to perror then exit with a failure
@@ -49,9 +48,6 @@ static char *createHTTPRequest(const char *url, const char *host) {
 			"Connection: close\r\n"
 			"\r\n";
 	char output[HTTPBUFFER];
-	
-	url = "/PNY-GeForce-Gaming-Epic-X-Graphics/dp/B0971ZW8YZ/ref=sr_1_3?keywords=nvidia%2Brtx%2B3080&qid=1663865807&sprefix=nvidia%2B%2Caps%2C92&sr=8-3&th=1";
-	
 	int length = sprintf(output, msg, url, host); //url was the old one for path
 	char *completeMsg = malloc(length * sizeof(char));
 	memcpy(completeMsg, output, length);
@@ -191,15 +187,12 @@ void httpProduct(header *head) {
 		printf("Sale is: %d\n", sale);
 		currHead = head;
 		head = head->next;
-		free(head);
+		free(currHead);
 		free(response);
 		free(http);
 	}
 	SSL_shutdown(conn);
-	SSL_free(conn);
 	close(socketfd);
-	free(response);
-	free(http);
 }
 
 /*

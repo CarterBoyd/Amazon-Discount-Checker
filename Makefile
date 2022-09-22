@@ -3,7 +3,7 @@
 all: main http
 
 http: Http.c
-	gcc -Wall Http.c -lssl -lcrypto -L/usr/local/opt/openssl/lib -I/usr/local/opt/openssl/include
+	gcc -Wall Http.c -c -I/usr/local/opt/openssl/include
 
 smtp: Smtp.c
 	gcc -Wall Smtp.c -o smtp

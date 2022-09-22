@@ -54,3 +54,6 @@ dkms.conf
 # Compiled
 http
 smtp
+main
+.Http.c.swp
+pathList.txt

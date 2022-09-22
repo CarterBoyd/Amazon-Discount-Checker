@@ -1,17 +1,11 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <string.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
+#include "Http.h"
 #include <openssl/ssl.h>
 
-#define BUFFER 160000
-#define PORT 443
-#define HTTPBUFFER 1000
-
+typedef struct httpHeader {
+	char *host;
+	char *url;
+	struct httpHeader *next;
+} header;
 
 /**
   * when a program has failed it will always send out to perror then exit with a failure
@@ -21,17 +15,19 @@ static inline void error(const char *error) {
 	exit(EXIT_FAILURE);
 }
 
+
 /**
   * If the old buffer is close to capacity it will create a new buffer
   * that is twice the size and copy all the information from the old to
   * the new, freeing the old buffer and returning the new one
-  */
+  *
 static inline char *resizeBuffer(char *oldBuffer, const int oldSize) {
 	char *newBuffer = malloc(sizeof(char) * (oldSize * 2));
 	memcpy(newBuffer, oldBuffer, oldSize);
 	free(oldBuffer);
 	return newBuffer;
 }
+*/
 
 /**
   * creates the socket and checks for errors created by the socket
@@ -55,10 +51,14 @@ static const int createSocket() {
 static char *createHTTPRequest(const char *url, const char *host) {
 	const char msg[] = "GET %s HTTP/1.1\r\n"
 			"Host: %s\r\n"
+			"Accept-Language: en-US\r\n"
 			"Connection: close\r\n"
 			"\r\n";
 	char output[HTTPBUFFER];
-	int length = sprintf(output, msg, url, host);
+	
+	url = "/PNY-GeForce-Gaming-Epic-X-Graphics/dp/B0971ZW8YZ/ref=sr_1_3?keywords=nvidia%2Brtx%2B3080&qid=1663865807&sprefix=nvidia%2B%2Caps%2C92&sr=8-3&th=1";
+	
+	int length = sprintf(output, msg, url, host); //url was the old one for path
 	char *completeMsg = malloc(length * sizeof(char));
 	memcpy(completeMsg, output, length);
 	completeMsg[length + 1] = '\0';
@@ -99,10 +99,8 @@ static inline void connectToServer(const int socketfd, const struct sockaddr_in 
 static void sendMsg(SSL *socketfd, const char *msg) {
 	ssize_t bytesTotal = 0, bytesSent = 0;
 	size_t msgLen = strlen(msg);
-	printf("Sending:\n%s\n", msg);
 	while (bytesTotal < msgLen) {
 		bytesSent = SSL_write(socketfd, msg + bytesTotal, msgLen - bytesTotal);
-		printf("%zd bytes sent\n", bytesSent);
 		if (bytesSent == -1)
 			error("sending");
 		bytesTotal += bytesSent;
@@ -117,51 +115,120 @@ static char *getData(SSL *socketfd) {
 	char *buff = malloc(BUFFER * sizeof(char));
 	ssize_t readSoFar;
 	int limit = 0, bufferSize = BUFFER;
-	while ((readSoFar = SSL_read(socketfd, buff, BUFFER)) > 0) {
-		printf("%s", buff);
-		memset(buff, 0, readSoFar);
-//		printf("%zd bytes read\n", readSoFar);
-//		limit += readSoFar;
-//		if (limit > bufferSize * .9) {
-//			printf("resizing buffer\n");
-//			buff = resizeBuffer(buff, bufferSize);
-//			bufferSize += bufferSize;
-//		}
+	while ((readSoFar = SSL_read(socketfd, buff + limit, bufferSize - limit)) > 0) {
+		limit += readSoFar;
 	}
 	if (readSoFar == -1)
 		error("read");
 	buff[limit] = '\0';
+	SSL_free(socketfd);
 	return buff;
 }
 
-SSL *createSSL(const int socketfd) {
+static SSL_CTX *createCTX() {
+	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
-	SSL_library_init();
-	SSL_CTX *ssl_ctx = SSL_CTX_new(SSLv23_client_method());
-	SSL *conn = SSL_new(ssl_ctx);
+	SSL_CTX *ctx = SSL_CTX_new(TLSv1_2_client_method());
+	if (ctx == NULL) {
+		error("ctx");
+	}
+	return ctx;
+}
+
+static SSL *createSSL(const int socketfd, SSL_CTX *ctx) {
+	OpenSSL_add_all_algorithms();
+	SSL_load_error_strings();	
+	SSL *conn = SSL_new(ctx);
+	if (conn == NULL) {
+		error("ssl_new(conn)");
+	}
 	SSL_set_fd(conn, socketfd);
 	if (SSL_connect(conn) == -1)
 		error("ssl connect");
 	return conn;
 }
 
+/**
+  * When grabbing from amazons page the string will need the class
+  * then it will look for "Save " from there a pointer will look for
+  * when the % gets there and then it will isolate and return the
+  * number
+  *
+  * @return -1 if there is no sale, or the actual percentage of
+  *		products sale
+  * NEEDS TO BE TESTED MORE
+  */
+static const int isOnSale(const char *webpage) {
+	const char *strInt = "<span class=\"delight-pricing-badge-label-text a-text-ellipsis\">";
+	char *ptr, *save = strstr(webpage, strInt);
+	save = strstr(save, "Save ");
+	if (save != NULL) {
+		for (ptr = save; *ptr != '%'; ++ptr);
+		*ptr = '\0';
+		save += 5;
+		return atoi(save);
+	}
+	return -1;
+}
+
+/**
+  * WARNING: do not use multiple websites at this moment
+  * 
+  * will run through the 
+  */
+void httpProduct(header *head) {
+	header *currHead;
+	SSL_library_init();
+	char *http, *response;
+	struct sockaddr_in sockaddrin;
+	int socketfd, sale;
+	SSL_CTX *ctx;
+	SSL *conn;
+	sockaddrin = connectToAddress(head->host);
+	socketfd = createSocket();
+	connectToServer(socketfd, sockaddrin);
+	ctx = createCTX();
+	conn = createSSL(socketfd, ctx);
+	while (head != NULL) {
+		http = createHTTPRequest(head->url, head->host);
+		sendMsg(conn, http);
+		response = getData(conn);
+		sale = isOnSale(response);
+		printf("Sale is: %d\n", sale);
+		currHead = head;
+		head = head->next;
+		free(head);
+		free(response);
+		free(http);
+	}
+	SSL_shutdown(conn);
+	SSL_free(conn);
+	close(socketfd);
+	free(response);
+	free(http);
+}
+
+/*
 int main(const int argc, const char *argv[]) {
 	if (argc < 3) {
 		fprintf(stderr, "Incorrect usage: ./http <host> <path>\n");
 		return EXIT_FAILURE;
 	}
+	SSL_library_init();
 	char *http = createHTTPRequest(argv[2], argv[1]);
 	struct sockaddr_in sockaddrin = connectToAddress(argv[1]);
 	const int socketfd = createSocket();
-	connectToServer(socketfd, sockaddrin);	
-	SSL *conn = createSSL(socketfd);
+	connectToServer(socketfd, sockaddrin);
+	SSL_CTX *ctx = createCTX();
+	SSL *conn = createSSL(socketfd, ctx);
 	sendMsg(conn, http);
 	char *response = getData(conn);
-	printf("%s\n", response);
+	int sale = isOnSale(response);
+	printf("Sale is: %d\n", sale);
 	SSL_shutdown(conn);
 	close(socketfd);
 	free(response);
 	free(http);
 	return EXIT_SUCCESS;
 }
-
+*/

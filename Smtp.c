@@ -10,7 +10,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <stdio.h>
-
+/*
 int main() {
 	int socketfd = socket(PF_INET, SOCK_STREAM, 0);
 	if (socketfd == -1) {
@@ -45,4 +45,4 @@ int main() {
 	printf("%5s\n", buff);
 	return 0;
 }
-
+*/

@@ -77,8 +77,8 @@ static struct sockaddr_in connectToAddress(const char *host) {
   * connects to the server and checks for errors
   */
 static inline void connectToServer(const int socketfd, const struct sockaddr_in sockaddrin) {
-    if (connect(socketfd, (struct sockaddr*) &sockaddrin, sizeof(sockaddrin)))
-        error("connect");
+	if (connect(socketfd, (struct sockaddr*) &sockaddrin, sizeof(sockaddrin)) == -1)
+		error("connect");
 }
 
 /**
@@ -119,9 +119,8 @@ static SSL_CTX *createCTX() {
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
 	SSL_CTX *ctx = SSL_CTX_new(TLSv1_2_client_method());
-	if (ctx == NULL) {
+	if (ctx == NULL)
 		error("ctx");
-	}
 	return ctx;
 }
 
@@ -129,9 +128,8 @@ static SSL *createSSL(const int socketfd, SSL_CTX *ctx) {
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();	
 	SSL *conn = SSL_new(ctx);
-	if (conn == NULL) {
+	if (conn == NULL)
 		error("ssl_new(conn)");
-	}
 	SSL_set_fd(conn, socketfd);
 	if (SSL_connect(conn) == -1)
 		error("ssl connect");
@@ -147,16 +145,23 @@ static SSL *createSSL(const int socketfd, SSL_CTX *ctx) {
   * @return -1 if there is no sale, or the actual percentage of
   *		products sale
   * NEEDS TO BE TESTED MORE
+  * 404 error: works
+  * 500 bad input:
+  * 300 input:
+  * 200 input with sale: works
+  * 200 input with no sale:
   */
 static const int isOnSale(const char *webpage) {
 	const char *strInt = "<span class=\"delight-pricing-badge-label-text a-text-ellipsis\">";
 	char *ptr, *save = strstr(webpage, strInt);
-	save = strstr(save, "Save ");
 	if (save != NULL) {
-		for (ptr = save; *ptr != '%'; ++ptr);
-		*ptr = '\0';
-		save += 5;
-		return atoi(save);
+		save = strstr(save, "Save ");
+		if (save != NULL) {
+			for (ptr = save; *ptr != '%'; ++ptr);
+			*ptr = '\0';
+			save += 5;
+			return atoi(save);
+		}
 	}
 	return -1;
 }
@@ -184,7 +189,10 @@ void httpProduct(header *head) {
 		sendMsg(conn, http);
 		response = getData(conn);
 		sale = isOnSale(response);
-		printf("Sale is: %d\n", sale);
+		if (sale != -1)
+			printf("Sale is: %d\n", sale);
+		else
+			fprintf(stderr, "could not find sale\n");
 		currHead = head;
 		head = head->next;
 		free(currHead);
@@ -195,27 +203,3 @@ void httpProduct(header *head) {
 	close(socketfd);
 }
 
-/*
-int main(const int argc, const char *argv[]) {
-	if (argc < 3) {
-		fprintf(stderr, "Incorrect usage: ./http <host> <path>\n");
-		return EXIT_FAILURE;
-	}
-	SSL_library_init();
-	char *http = createHTTPRequest(argv[2], argv[1]);
-	struct sockaddr_in sockaddrin = connectToAddress(argv[1]);
-	const int socketfd = createSocket();
-	connectToServer(socketfd, sockaddrin);
-	SSL_CTX *ctx = createCTX();
-	SSL *conn = createSSL(socketfd, ctx);
-	sendMsg(conn, http);
-	char *response = getData(conn);
-	int sale = isOnSale(response);
-	printf("Sale is: %d\n", sale);
-	SSL_shutdown(conn);
-	close(socketfd);
-	free(response);
-	free(http);
-	return EXIT_SUCCESS;
-}
-*/

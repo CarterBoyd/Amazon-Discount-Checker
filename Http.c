@@ -182,12 +182,12 @@ void httpProduct(header *head) {
 	int socketfd, sale;
 	SSL_CTX *ctx;
 	SSL *conn;
-	sockaddrin = connectToAddress(head->host);
-	socketfd = createSocket();
-	connectToServer(socketfd, sockaddrin);
-	ctx = createCTX();
-	conn = createSSL(socketfd, ctx);
 	while (head != NULL) {
+		sockaddrin = connectToAddress(head->host);
+		socketfd = createSocket();
+		connectToServer(socketfd, sockaddrin);
+		ctx = createCTX();
+		conn = createSSL(socketfd, ctx);
 		http = createHTTPRequest(head->url, head->host);
 		sendMsg(conn, http);
 		response = getData(conn);
@@ -201,8 +201,8 @@ void httpProduct(header *head) {
 		free(currHead);
 		free(response);
 		free(http);
+		SSL_shutdown(conn);
+		close(socketfd);
 	}
-	SSL_shutdown(conn);
-	close(socketfd);
 }
 

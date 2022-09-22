@@ -10,7 +10,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <openssl/ssl.h>
 
 #define BUFFER 1600000
 #define PORT 443

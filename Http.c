@@ -1,4 +1,5 @@
 #include "Http.h"
+#include <openssl/ssl.h>
 
 /**
   * when a program has failed it will always send out to perror then exit with a failure
@@ -118,7 +119,9 @@ static char *getData(SSL *socketfd) {
 static SSL_CTX *createCTX() {
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
-	SSL_CTX *ctx = SSL_CTX_new(TLSv1_2_client_method());
+	SSL_CTX *ctx = SSL_CTX_new(TLS_client_method()); //depricated but if changed it will keep encrypted
+	SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1_3);
+//	SSL_CTX *ctx = SSL_CTX_new(TLSv1_2_client_method()); //depricated but if changed it will keep encrypted
 	if (ctx == NULL)
 		error("ctx");
 	return ctx;

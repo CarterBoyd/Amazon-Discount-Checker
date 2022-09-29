@@ -51,6 +51,8 @@ static char *createHTTPRequest(const char *url, const char *host) {
 	char output[HTTPBUFFER];
 	int length = sprintf(output, msg, url, host); //url was the old one for path
 	char *completeMsg = malloc(length * sizeof(char));
+	if (completeMsg == NULL)
+		error("allocating completeMsg");
 	memcpy(completeMsg, output, length);
 	completeMsg[length + 1] = '\0';
 	return completeMsg;
@@ -92,8 +94,8 @@ static void sendMsg(SSL *socketfd, const char *msg) {
 	size_t msgLen = strlen(msg);
 	while (bytesTotal < msgLen) {
 		bytesSent = SSL_write(socketfd, msg + bytesTotal, msgLen - bytesTotal);
-		if (bytesSent == -1)
-			error("sending");
+		if (bytesSent != 1)
+			SSL_get_error(socketfd, bytesSent);
 		bytesTotal += bytesSent;
 	}
 }
@@ -104,6 +106,8 @@ static void sendMsg(SSL *socketfd, const char *msg) {
   */
 static char *getData(SSL *socketfd) {
 	char *buff = malloc(BUFFER * sizeof(char));
+	if (buff == NULL)
+		error("allocating buff getting data");
 	ssize_t readSoFar;
 	int limit = 0, bufferSize = BUFFER;
 	while ((readSoFar = SSL_read(socketfd, buff + limit, bufferSize - limit)) > 0) {
@@ -114,7 +118,7 @@ static char *getData(SSL *socketfd) {
 		}
 	}
 	if (readSoFar == -1)
-		error("read");
+		SSL_get_error(socketfd, readSoFar);
 	buff[limit] = '\0';
 	SSL_free(socketfd);
 	return buff;

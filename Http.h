@@ -11,7 +11,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-#define BUFFER 1600000
+#define BUFFER 100000
 #define PORT 443
 #define HTTPBUFFER 1000
 

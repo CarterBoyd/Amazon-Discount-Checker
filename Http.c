@@ -98,6 +98,7 @@ static void sendMsg(SSL *socketfd, const char *msg) {
 			SSL_get_error(socketfd, bytesSent);
 		bytesTotal += bytesSent;
 	}
+//	printf("bytes sent: %zd\n", bytesTotal);
 }
 
 /**
@@ -117,19 +118,18 @@ static char *getData(SSL *socketfd) {
 			bufferSize += bufferSize;
 		}
 	}
+	printf("grabbed %d bytes\n", limit);
 	if (readSoFar == -1)
 		SSL_get_error(socketfd, readSoFar);
 	buff[limit] = '\0';
-	SSL_free(socketfd);
 	return buff;
 }
 
 static SSL_CTX *createCTX() {
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
-	SSL_CTX *ctx = SSL_CTX_new(TLS_client_method()); //depricated but if changed it will keep encrypted
+	SSL_CTX *ctx = SSL_CTX_new(TLS_client_method());
 	SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1_3);
-//	SSL_CTX *ctx = SSL_CTX_new(TLSv1_2_client_method()); //depricated but if changed it will keep encrypted
 	if (ctx == NULL)
 		error("ctx");
 	return ctx;
@@ -176,7 +176,7 @@ char *getProductName(const char *webpage) {
   * 500 bad input:
   * 300 input:
   * 200 input with sale: works
-  * 200 input with no sale:
+  * 200 input with no sale: works
   */
 static const int isOnSale(const char *webpage) {
 	const char *strInt = "<span class=\"delight-pricing-badge-label-text a-text-ellipsis\">";
@@ -212,6 +212,7 @@ void httpProduct(header *head) {
 		connectToServer(socketfd, sockaddrin);
 		ctx = createCTX();
 		conn = createSSL(socketfd, ctx);
+//	while (head != NULL) {
 		http = createHTTPRequest(head->url, head->host);
 		sendMsg(conn, http);
 		response = getData(conn);
@@ -228,8 +229,10 @@ void httpProduct(header *head) {
 		free(currHead);
 		free(response);
 		free(http);
-		SSL_shutdown(conn);
-		close(socketfd);
+//	}
+	SSL_shutdown(conn);
+	SSL_free(conn);
+	close(socketfd);
 	}
 }
 

@@ -143,6 +143,22 @@ static SSL *createSSL(const int socketfd, SSL_CTX *ctx) {
 	return conn;
 }
 
+char *getProductName(const char *webpage) {
+	const char *product = "<span id=\"productTitle\" class=\"a-size-large product-title-word-break\">";
+	size_t bytes = 0;
+	char *name = strstr(webpage, product), *ret;
+	if (name != NULL) {
+		name = strstr(name, ">");
+		for (++name; *name == ' '; ++name);
+		for (bytes = 0; name[bytes] != '<'; ++bytes);
+		ret = strndup(name, bytes);
+		if (ret == NULL)
+			error("string duplicating the products name");
+		return ret;
+	}
+	return "product not found";
+}
+
 /**
   * When grabbing from amazons page the string will need the class
   * then it will look for "Save " from there a pointer will look for
@@ -181,7 +197,7 @@ static const int isOnSale(const char *webpage) {
 void httpProduct(header *head) {
 	header *currHead;
 	SSL_library_init();
-	char *http, *response;
+	char *http, *response, *name;
 	struct sockaddr_in sockaddrin;
 	int socketfd, sale;
 	SSL_CTX *ctx;
@@ -196,12 +212,15 @@ void httpProduct(header *head) {
 		sendMsg(conn, http);
 		response = getData(conn);
 		sale = isOnSale(response);
+		name = getProductName(response);
 		if (sale != -1)
 			printf("Sale is: %d\n", sale);
 		else
 			fprintf(stderr, "could not find sale\n");
 		currHead = head;
 		head = head->next;
+		if (strcmp(name, "product not found") != 0)
+			free(name);
 		free(currHead);
 		free(response);
 		free(http);

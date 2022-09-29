@@ -14,14 +14,14 @@ static inline void error(const char *error) {
   * If the old buffer is close to capacity it will create a new buffer
   * that is twice the size and copy all the information from the old to
   * the new, freeing the old buffer and returning the new one
-  *
+  */
 static inline char *resizeBuffer(char *oldBuffer, const int oldSize) {
-	char *newBuffer = malloc(sizeof(char) * (oldSize * 2));
-	memcpy(newBuffer, oldBuffer, oldSize);
-	free(oldBuffer);
-	return newBuffer;
+	char *resize = realloc(oldBuffer, oldSize + oldSize);
+	if (resize == NULL)
+		error("resizing buffer");
+	return resize;
 }
-*/
+
 
 /**
   * creates the socket and checks for errors created by the socket

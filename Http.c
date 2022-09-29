@@ -108,6 +108,10 @@ static char *getData(SSL *socketfd) {
 	int limit = 0, bufferSize = BUFFER;
 	while ((readSoFar = SSL_read(socketfd, buff + limit, bufferSize - limit)) > 0) {
 		limit += readSoFar;
+		if (limit > bufferSize * .9) {
+			resizeBuffer(buff, bufferSize);
+			bufferSize += bufferSize;
+		}
 	}
 	if (readSoFar == -1)
 		error("read");
